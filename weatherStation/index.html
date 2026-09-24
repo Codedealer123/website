@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ESP32 Weather Station</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="eyebrow">ESP32 WEATHER STATION</div>
+      <h1>Weather Dashboard</h1>
+      <div id="updated" class="muted">Waiting for sensor data...</div>
+    </div>
+    <div class="top-actions">
+      <span class="connection"><span id="dot" class="dot"></span><span id="status">Disconnected</span></span>
+      <button id="connect" class="primary">Connect</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero card">
+      <div>
+        <div class="label">CURRENT TEMPERATURE</div>
+        <div class="hero-temp"><span id="heroTemp">--</span><small>°C</small></div>
+        <div id="comfort" class="comfort">Waiting for reading</div>
+      </div>
+      <div class="hero-side">
+        <div class="mini"><span>Humidity</span><strong id="rh">--%</strong></div>
+        <div class="mini"><span>Feels like</span><strong id="feels">--°C</strong></div>
+        <div class="mini"><span>Heat Index</span><strong id="hi">--°C</strong></div>
+      </div>
+    </section>
+
+    <section class="grid metrics">
+      <article class="card metric"><span>Temperature</span><strong id="temp">--</strong><small>°C</small></article>
+      <article class="card metric"><span>Humidity</span><strong id="rh2">--</strong><small>%</small></article>
+      <article class="card metric"><span>Feels Like</span><strong id="feels2">--</strong><small>°C</small></article>
+      <article class="card metric"><span>Heat Index</span><strong id="hi2">--</strong><small>°C</small></article>
+      <article class="card metric"><span>Humidex</span><strong id="hmdx">--</strong></article>
+      <article class="card metric"><span>Dew Point</span><strong id="dew">--</strong><small>°C</small></article>
+      <article class="card metric"><span>Absolute Humidity</span><strong id="abs">--</strong><small>g/m³</small></article>
+      <article class="card metric"><span>VPD</span><strong id="vpd">--</strong><small>kPa</small></article>
+    </section>
+
+    <section class="two-col">
+      <article class="card chart-card">
+        <div class="section-head"><div><h2>Temperature</h2><p>Live sensor history</p></div><span id="tempTrend" class="trend">—</span></div>
+        <canvas id="tempChart"></canvas>
+      </article>
+      <article class="card chart-card">
+        <div class="section-head"><div><h2>Humidity</h2><p>Live sensor history</p></div><span id="humidityTrend" class="trend">—</span></div>
+        <canvas id="humidityChart"></canvas>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><h2>Trends</h2><p>Rate of change based on stored readings</p></div></div>
+      <div class="trend-grid">
+        <div><span>Temperature</span><b id="tRate">--</b><small>°C/min</small></div>
+        <div><span>Humidity</span><b id="hRate">--</b><small>%/min</small></div>
+        <div><span>5-minute</span><b id="t5">--</b><small>°C</small></div>
+        <div><span>15-minute</span><b id="t15">--</b><small>°C</small></div>
+        <div><span>1-hour</span><b id="t60">--</b><small>°C</small></div>
+        <div><span>Heat Index trend</span><b id="hiTrend">--</b><small>°C/hour</small></div>
+        <div><span>Dew Point trend</span><b id="dewTrend">--</b><small>°C/hour</small></div>
+        <div><span>Humidity trend</span><b id="rhTrend">--</b><small>%/hour</small></div>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="section-head"><div><h2>Statistics</h2><p>Temperature over selected history</p></div></div>
+        <div class="stats" id="tempStats"></div>
+      </article>
+      <article class="card">
+        <div class="section-head"><div><h2>History</h2><p>Stored locally in your browser</p></div></div>
+        <div class="history-buttons">
+          <button data-window="live" class="active">Live</button>
+          <button data-window="hour">1 hour</button>
+          <button data-window="day">24 hours</button>
+          <button data-window="week">7 days</button>
+        </div>
+        <div class="history-info">
+          <div><span>Readings</span><b id="readingCount">0</b></div>
+          <div><span>Last packet</span><b id="lastPacket">--</b></div>
+          <div><span>Data range</span><b id="dataRange">--</b></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card">
+      <div class="section-head"><div><h2>Forecast / Projection</h2><p>Short-term linear trend projection from recent sensor data — not a weather-service forecast.</p></div></div>
+      <div class="forecast-grid">
+        <div><span>30-min temperature</span><b id="forecastT30">--</b></div>
+        <div><span>1-hour temperature</span><b id="forecastT60">--</b></div>
+        <div><span>30-min humidity</span><b id="forecastH30">--</b></div>
+        <div><span>1-hour humidity</span><b id="forecastH60">--</b></div>
+      </div>
+    </section>
+
+    <section class="two-col">
+      <article class="card">
+        <div class="section-head"><div><h2>Alerts</h2><p>Configurable local thresholds</p></div></div>
+        <div class="alert-settings">
+          <label>High temp <input id="highTemp" type="number" value="35"> °C</label>
+          <label>Low temp <input id="lowTemp" type="number" value="10"> °C</label>
+          <label>High humidity <input id="highHumidity" type="number" value="80"> %</label>
+          <label>Low humidity <input id="lowHumidity" type="number" value="20"> %</label>
+          <label>High heat index <input id="highHI" type="number" value="40"> °C</label>
+          <label>High dew point <input id="highDew" type="number" value="24"> °C</label>
+        </div>
+        <div id="alerts" class="alerts"><div class="empty">No active alerts</div></div>
+      </article>
+      <article class="card">
+        <div class="section-head"><div><h2>Sensor Health</h2><p>BLE and packet quality</p></div></div>
+        <div class="health">
+          <div><span>BLE status</span><b id="bleHealth">Disconnected</b></div>
+          <div><span>Last packet</span><b id="healthLast">--</b></div>
+          <div><span>Packets received</span><b id="packets">0</b></div>
+          <div><span>Missing packets</span><b id="missing">0</b></div>
+          <div><span>Invalid readings</span><b id="invalid">0</b></div>
+          <div><span>Data quality</span><b id="quality">--</b></div>
+        </div>
+      </article>
+    </section>
+
+    <section class="card raw-card">
+      <div class="section-head"><div><h2>Raw BLE Data</h2><p>Latest JSON packet</p></div></div>
+      <pre id="raw">{}</pre>
+      <div id="error" class="error"></div>
+    </section>
+  </main>
+
+  <footer>ESP32 Weather Station • Data stays in this browser • Web Bluetooth required</footer>
+  <script src="script.js"></script>
+</body>
+</html>
